@@ -6,7 +6,7 @@ const EndpointData = React.lazy(() => import("~/components/endpoint-data").then(
 
 const Home: NextPage = () => {
   return (
-    <main className="m-auto p-8 max-w-7xl">
+    <main data-testid="main" className="m-auto p-8 max-w-7xl">
       <Accordion controlText="View crime data">
         <EndpointData endpoint="/api/crime-data" />
       </Accordion>
