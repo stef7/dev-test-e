@@ -1,7 +1,6 @@
 import type { NextPage } from "next";
 import React from "react";
-
-const EndpointData = React.lazy(() => import("~/components/endpoint-data").then((m) => ({ default: m.EndpointData })));
+import { EndpointData } from "~/components/endpoint-data";
 
 const Home: NextPage = () => {
   return (

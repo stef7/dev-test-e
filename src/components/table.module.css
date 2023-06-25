@@ -1,0 +1,43 @@
+table.table > thead {
+  top: 0
+}
+
+:global(.chakra-collapse[style*="height: auto;"] > .chakra-accordion__panel) > table.table > thead {
+  top: var(--accordion-button-height, 0);
+}
+
+@media only screen and (max-width: 800px) {
+  table.table > thead {
+    display: none;
+  }
+
+  table.table > tbody > tr {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--chakra-colors-chakra-border-color);
+    padding: max(1.5em, 5%);
+    gap: max(1.25em, 4%);
+  }
+
+  table.table > tbody > tr:nth-child(even) {
+    background-color: var(--chakra-colors-whiteAlpha-50)
+  }
+
+  table.table > tbody > tr > td {
+    display: flex;
+    border: 0;
+    padding: 0;
+    gap: max(1.5em, 5%);
+  }
+
+  table.table > tbody > tr > td:before {
+    content: attr(aria-label);
+    width: 35%;
+    flex-shrink: 0;
+    color: var(--chakra-colors-gray-400);
+    text-transform: uppercase;
+    font-size: 80%;
+    font-weight: bold;
+    text-align: end;
+  }
+}

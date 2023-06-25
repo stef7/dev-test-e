@@ -1,7 +1,4 @@
-import { useMemo, useState } from "react";
-import { useAsync } from "react-use";
-import { CrimeDataResponseBody } from "~/pages/api/crime-data";
-
+import React, { useMemo, useState } from "react";
 import {
   Table,
   Thead,
@@ -9,117 +6,192 @@ import {
   Tr,
   Th,
   Td,
-  Tfoot,
-  Select,
+  Spinner,
+  Flex,
   FormControl,
   FormLabel,
-  Flex,
-  Button,
-  useDisclosure,
+  Select,
+  Input,
+  Box,
 } from "@chakra-ui/react";
+import { useDebounce } from "react-use";
+import { CrimeDataResponseBody, CrimeDataRowAny } from "~/pages/api/crime-data";
+import { AccordionOptional } from "./accordion";
+import useSWRImmutable from "swr/immutable";
 
-const CollapsibleRowGroup = <R extends Record<string, string>>({
-  groupingValue,
-  rows,
-  keys,
-}: {
-  groupingValue: string | null;
-  rows: R[];
-  keys: (keyof R & string)[];
-}) => {
-  const { isOpen, onToggle } = useDisclosure({ defaultIsOpen: !groupingValue });
+import styles from "./table.module.css";
 
-  return (
-    <Tbody>
-      <Tr display={groupingValue !== null ? undefined : "none"}>
-        <Th scope="col" colSpan={keys.length + 1}>
-          <Button onClick={onToggle} display="inline-flex" gap={3}>
-            {`${isOpen ? "▼" : "►"} ${groupingValue} (${rows.length})`}
-          </Button>
-        </Th>
-      </Tr>
-      {rows.map((row, rowIndex) => (
-        <Tr key={rowIndex} display={isOpen ? undefined : "none"}>
-          <Td display={groupingValue !== null ? undefined : "none"} />
-          {keys.map((key, colIndex) =>
-            colIndex ? (
-              <Td key={`${colIndex}: ${key}`}>{row[key]}</Td>
-            ) : (
-              <Th key={key} scope="row">
-                {row[key]}
+export const EndpointData: React.FC<{ endpoint: string }> = ({ endpoint }) => {
+  const [date, setDate] = useState<string>();
+  const [dateDebounced, setDateDebounced] = useState<string>();
+  useDebounce(() => setDateDebounced(date), 1000, [date]);
+  const [offencesBy, setOffencesBy] = useState<keyof CrimeDataRowAny>();
+
+  const params = useMemo(
+    () =>
+      new URLSearchParams({
+        ...(offencesBy ? { offencesBy } : {}),
+        ...(dateDebounced ? { date: dateDebounced } : {}),
+      }).toString(),
+    [dateDebounced, offencesBy],
+  );
+  const {
+    data: { data, keys, allKeys } = {},
+    isLoading,
+  } = useSWRImmutable(
+    ["endpointData", endpoint, params],
+    async ([, endpoint, params]) => {
+      const response = await fetch(`${endpoint}?${params}`);
+      return response.json() as Promise<CrimeDataResponseBody>;
+    },
+    { keepPreviousData: true },
+  );
+
+  /** Memoise rendering to improve performance */
+  const header = useMemo(
+    () => (
+      <Thead pos="sticky" zIndex="docked" bg="var(--chakra-colors-chakra-body-bg)">
+        <Tr>
+          {keys?.map((key, colIndex) =>
+            key === "_id" ? null : (
+              <Th
+                key={`${colIndex}: ${key}`}
+                scope="col"
+                pos="relative"
+                _after={{
+                  content: '""',
+                  h: "1px",
+                  w: "full",
+                  pos: "absolute",
+                  left: 0,
+                  bottom: 0,
+                  bgColor: "var(--chakra-colors-chakra-border-color)",
+                }}
+              >
+                {key}
               </Th>
             ),
           )}
         </Tr>
-      ))}
-    </Tbody>
+      </Thead>
+    ),
+    [keys],
   );
-};
 
-export const EndpointData: React.FC<{ endpoint: string }> = ({ endpoint }) => {
-  const [groupBy, setGroupBy] = useState("Suburb - Incident");
-  const data = useAsync(async () => {
-    const response = await fetch(`${endpoint}?${new URLSearchParams(groupBy ? { groupBy } : {})}`);
-    const result: CrimeDataResponseBody = await response.json();
-    if ("error" in result) throw new Error(result.error);
-    return result;
-  }, [endpoint, groupBy]);
+  const rows = useMemo(
+    () =>
+      data?.map((row, rowIndex) => ({
+        data: row,
+        element: (
+          <Tr key={`${rowIndex}: ${row._id}`}>
+            {keys?.map((key, colIndex) =>
+              key === "_id" ? null : (
+                <Td key={`${colIndex}: ${key}`} aria-label={key}>
+                  {String(row[key])}
+                </Td>
+              ),
+            )}
+          </Tr>
+        ),
+      })),
+    [data, keys],
+  );
 
-  const keys = useMemo(() => {
-    const rows = data.value && "groupBy" in data.value ? Object.values(data.value.groups).flat() : data.value;
-    return rows && [...new Set(rows.flatMap((row) => Object.keys(row)))];
-  }, [data.value]);
+  const [groupBy, setGroupBy] = useState<keyof CrimeDataRowAny>("Suburb - Incident");
 
-  const entries = useMemo(
-    () => data.value && ("groupBy" in data.value ? Object.entries(data.value.groups) : ([[null, data.value]] as const)),
-    [data.value],
+  const groups = useMemo(
+    () =>
+      rows &&
+      Array.from(
+        rows.reduce((map, row) => {
+          const groupByValue = row.data[groupBy];
+          map.get(groupByValue)?.push(row) ?? map.set(groupByValue, [row]);
+          return map;
+        }, new Map<typeof rows[number]["data"][typeof groupBy], typeof rows>()),
+      ),
+    [rows, groupBy],
   );
 
   return (
-    <Table>
-      <Thead pos="sticky" top={0} zIndex="docked" bgColor="Background">
-        <Tr>
-          <Th scope="col" display={groupBy ? undefined : "none"}>
-            Group
-          </Th>
-          {keys?.map((key, colIndex) => (
-            <Th key={`${colIndex}: ${key}`} scope="col">
-              {key}
-            </Th>
-          ))}
-        </Tr>
-      </Thead>
-      {(keys && (
-        <>
-          {entries?.map(([groupingValue, rows]) => (
-            <CollapsibleRowGroup key={groupingValue} {...{ groupingValue, rows, keys }} />
-          ))}
-          <Tfoot pos="sticky" bottom={0} zIndex="docked" bgColor="Background">
-            <Tr>
-              <Td colSpan={keys.length + (groupBy ? 1 : 0)}>
-                <Flex wrap="wrap">
-                  <FormControl w="fit-content">
-                    <FormLabel>Group by</FormLabel>
-                    <Select
-                      placeholder="(no grouping)"
-                      onInput={(ev) => setGroupBy(ev.currentTarget.value)}
-                      value={groupBy}
-                    >
-                      {keys.map((key) => (key === "_id" ? null : <option key={key}>{key}</option>))}
-                    </Select>
-                  </FormControl>
-                </Flex>
-              </Td>
-            </Tr>
-          </Tfoot>
-        </>
-      )) ?? (
-        <Tbody>
-          <Tr>
-            <Td>{data.loading ? "Loading..." : data.error ? "Error loading data." : "No data to display."}</Td>
-          </Tr>
-        </Tbody>
-      )}
-    </Table>
+    <Flex direction="column" minH="100vh" pos="relative">
+      <Flex
+        wrap="wrap"
+        pos="sticky"
+        bottom={0}
+        zIndex="banner"
+        bgColor="var(--chakra-colors-chakra-subtle-bg)"
+        borderTopWidth={1}
+        padding={5}
+        paddingY={3}
+        gap={3}
+        order={2}
+      >
+        <FormControl w="fit-content">
+          <FormLabel fontSize="sm">Filter by date</FormLabel>
+          <Input
+            size="sm"
+            placeholder="(none)"
+            type="date"
+            onInput={(ev) => setDate(ev.currentTarget.value)}
+            value={date}
+          />
+        </FormControl>
+
+        <FormControl w="fit-content">
+          <FormLabel fontSize="sm">Offences by</FormLabel>
+          <Select
+            size="sm"
+            onInput={(ev) => setOffencesBy(ev.currentTarget.value)}
+            placeholder={groupBy ? "unset 'Group by' to enable" : "(none)"}
+            value={groupBy ? undefined : offencesBy}
+            isDisabled={!!groupBy}
+          >
+            {allKeys?.map((key) =>
+              key === "_id" || key === "Offence count" ? null : <option key={key}>{key}</option>,
+            )}
+          </Select>
+        </FormControl>
+
+        <FormControl w="fit-content">
+          <FormLabel fontSize="sm">Group by</FormLabel>
+          <Select
+            size="sm"
+            onInput={(ev) => setGroupBy(ev.currentTarget.value)}
+            placeholder={offencesBy ? "unset 'Offences by' to enable" : "(none)"}
+            value={offencesBy ? undefined : groupBy}
+            isDisabled={!!offencesBy}
+          >
+            {allKeys?.map((key) => (key === "_id" ? null : <option key={key}>{key}</option>))}
+          </Select>
+        </FormControl>
+      </Flex>
+
+      <Box pos="relative" flexGrow={1}>
+        {isLoading ? (
+          <Spinner margin={6} />
+        ) : !groups ? (
+          <Box margin={6}>Error loading data.</Box>
+        ) : !groups.length ? (
+          <Box margin={6}>No data to display.</Box>
+        ) : (
+          <AccordionOptional>
+            {groups?.map(([groupByValue, rows], index) => {
+              const buttonText = `${groupByValue} (${rows.length})`;
+              return {
+                groupByValue,
+                buttonText,
+                key: `${index}: ${buttonText}`,
+                node: (
+                  <Table className={styles["table"]}>
+                    {header}
+                    <Tbody fontSize="sm">{rows.map((row) => row.element)}</Tbody>
+                  </Table>
+                ),
+              };
+            })}
+          </AccordionOptional>
+        )}
+      </Box>
+    </Flex>
   );
 };

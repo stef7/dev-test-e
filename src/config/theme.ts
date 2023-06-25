@@ -1,6 +1,6 @@
-import { extendTheme, type ThemeConfig } from "@chakra-ui/react";
+import { extendTheme, type ThemeExtension } from "@chakra-ui/react";
 
-const extension: { config: ThemeConfig } = {
+const extension: ReturnType<ThemeExtension> = {
   config: {
     initialColorMode: "dark",
     useSystemColorMode: true,
