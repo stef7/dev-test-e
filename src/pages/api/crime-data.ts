@@ -35,7 +35,6 @@ const crimeDataHandler: NextApiHandler<CrimeDataResponseBody> = async (req, res)
   const { date, offencesBy } = req.query;
   if (Array.isArray(date)) throw new ApiError(422, "can only filter data by max of 1 date");
   if (Array.isArray(offencesBy)) throw new ApiError(422, "can only aggregate offences by max of 1 column");
-  // if (date && offencesBy) throw new ApiError(422, "date & offencesBy parameters cannot be used together");
 
   let data: CrimeDataAny = dataSource as CrimeData;
 
@@ -49,7 +48,7 @@ const crimeDataHandler: NextApiHandler<CrimeDataResponseBody> = async (req, res)
       return rowDate && dates.includes(rowDate);
     });
   }
-  // else
+
   if (offencesBy) {
     const groupMap = new Map<unknown, number>();
     for (const row of data) {
