@@ -14,7 +14,7 @@ const AccordionItemWithSticky: React.FC<AccordionChild> = ({ buttonText, node })
   }, [height]);
 
   return (
-    <AccordionItem ref={itemRef} pos="relative">
+    <AccordionItem ref={itemRef} pos="relative" data-testid="accordion-item">
       <AccordionButton
         padding={0}
         ref={buttonRef}
@@ -29,7 +29,7 @@ const AccordionItemWithSticky: React.FC<AccordionChild> = ({ buttonText, node })
           {buttonText}
         </Heading>
       </AccordionButton>
-      <AccordionPanel padding={0} motionProps={{ className: styles['panel'] }}>
+      <AccordionPanel padding={0} motionProps={{ className: styles["panel"] }}>
         {node}
       </AccordionPanel>
     </AccordionItem>
@@ -39,7 +39,7 @@ const AccordionItemWithSticky: React.FC<AccordionChild> = ({ buttonText, node })
 export const AccordionOptional: React.FC<{ children: AccordionChild[] }> = ({ children }) => {
   if (children.length < 2 && !children[0]?.groupByValue) return children[0]?.node;
   return (
-    <Accordion allowMultiple>
+    <Accordion allowMultiple data-testid="accordion">
       {children.map((item) => (
         <AccordionItemWithSticky {...item} key={item.key} />
       ))}

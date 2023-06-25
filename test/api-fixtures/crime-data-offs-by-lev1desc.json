@@ -1,0 +1,26 @@
+{
+  "data": [
+    {
+      "Offence Level 1 Description": "OFFENCES AGAINST PROPERTY",
+      "Offence count": 104
+    },
+    {
+      "Offence Level 1 Description": "OFFENCES AGAINST THE PERSON",
+      "Offence count": 22
+    }
+  ],
+  "keys": [
+    "Offence Level 1 Description",
+    "Offence count"
+  ],
+  "allKeys": [
+    "_id",
+    "Reported Date",
+    "Suburb - Incident",
+    "Postcode - Incident",
+    "Offence Level 1 Description",
+    "Offence Level 2 Description",
+    "Offence Level 3 Description",
+    "Offence count"
+  ]
+}

@@ -5,7 +5,7 @@ import { vi } from "vitest";
 
 vi.mock("~/components/endpoint-data");
 
-describe("App", () => {
+describe(Home.name, () => {
   it("renders headline", () => {
     render(<Home />);
 

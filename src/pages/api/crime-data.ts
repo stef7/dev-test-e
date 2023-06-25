@@ -1,5 +1,4 @@
 import { NextApiHandler } from "next";
-import { ApiError } from "next/dist/server/api-utils";
 import dataSource from "~/data/crime_record.csv";
 
 type CrimeDataRow = {
@@ -24,7 +23,9 @@ type CrimeDataAny<K extends keyof CrimeDataRow = keyof CrimeDataRow> = CrimeData
 
 type WithKeys<T> = { data: T; keys: string[]; allKeys: (keyof CrimeDataRow)[] };
 
-export type CrimeDataResponseBody = WithKeys<CrimeDataAny>;
+export type CrimeDataResponseBody<K extends keyof CrimeDataRow = keyof CrimeDataRow> =
+  | WithKeys<CrimeDataAny<K>>
+  | string;
 
 /**
  * TODO: Optimise with caching
@@ -33,8 +34,8 @@ export type CrimeDataResponseBody = WithKeys<CrimeDataAny>;
  */
 const crimeDataHandler: NextApiHandler<CrimeDataResponseBody> = async (req, res) => {
   const { date, offencesBy } = req.query;
-  if (Array.isArray(date)) throw new ApiError(422, "can only filter data by max of 1 date");
-  if (Array.isArray(offencesBy)) throw new ApiError(422, "can only aggregate offences by max of 1 column");
+  if (Array.isArray(date)) return res.status(422).send("can only filter data by max of 1 date");
+  if (Array.isArray(offencesBy)) return res.status(422).send("can only aggregate offences by max of 1 column");
 
   let data: CrimeDataAny = dataSource as CrimeData;
 

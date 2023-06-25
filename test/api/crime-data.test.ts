@@ -1,7 +1,7 @@
 import crimeDataHandler from "~/pages/api/crime-data";
 import { createMocks } from "node-mocks-http";
 import data from "~/data/crime_record.csv";
-import { NextApiRequest } from "next";
+import { NextApiRequest, NextApiResponse } from "next";
 
 const allKeys = [
   "_id",
@@ -16,7 +16,7 @@ const allKeys = [
 
 describe(crimeDataHandler.name, () => {
   it("returns plain data as expected with no query params", async () => {
-    const { req, res } = createMocks<NextApiRequest>();
+    const { req, res } = createMocks<NextApiRequest, NextApiResponse>();
 
     await crimeDataHandler(req, res);
 
@@ -25,7 +25,7 @@ describe(crimeDataHandler.name, () => {
   });
 
   it("returns data filtered by date param [formatted per HTML date input]", async () => {
-    const { req, res } = createMocks<NextApiRequest>({
+    const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
       query: {
         date: "2018-07-01",
       },
@@ -53,7 +53,7 @@ describe(crimeDataHandler.name, () => {
   });
 
   it("returns data of offence cont aggregated by column specified in offencesBy param", async () => {
-    const { req, res } = createMocks<NextApiRequest>({
+    const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
       query: {
         offencesBy: "Offence Level 1 Description",
       },
@@ -78,8 +78,8 @@ describe(crimeDataHandler.name, () => {
     });
   });
 
-  it("throws when trying to use date & offencesBy params together", async () => {
-    const { req, res } = createMocks<NextApiRequest>({
+  it("handles date & offencesBy params together", async () => {
+    const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
       query: {
         date: "2019-07-01",
         offencesBy: "Reported Date",
@@ -99,5 +99,31 @@ describe(crimeDataHandler.name, () => {
       keys: ["Reported Date", "Offence count"],
       allKeys,
     });
+  });
+
+  it("throws error if multiple date params", async () => {
+    const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
+      query: {
+        date: ["2019-07-01", "2018-07-01"],
+      },
+    });
+
+    await crimeDataHandler(req, res);
+
+    expect(res._getStatusCode()).toBe(422);
+    expect(res._getData()).toEqual("can only filter data by max of 1 date");
+  });
+
+  it("throws error if multiple offencesBy params", async () => {
+    const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
+      query: {
+        offencesBy: ["Suburb - Incident", "Postcode - Incident"],
+      },
+    });
+
+    await crimeDataHandler(req, res);
+
+    expect(res._getStatusCode()).toBe(422);
+    expect(res._getData()).toEqual("can only aggregate offences by max of 1 column");
   });
 });
